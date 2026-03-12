@@ -14,9 +14,16 @@ export const scanCommand = new Command('scan')
   .option('-o, --output <path>', 'Output file for scan results (JSON)')
   .option('--include <patterns...>', 'Files to include')
   .option('--exclude <patterns...>', 'Files to exclude')
-  .option('-f, --framework <type>', 'Framework type (express, fastify, nest)')
+  .option('-f, --framework <type>', 'Framework type (express, fastify, nest, electron)')
   .action(async (options) => {
-    console.log(chalk.blue('Scanning codebase...'));
+    const framework = options.framework || 'express';
+    const isElectron = framework.toLowerCase() === 'electron';
+
+    if (isElectron) {
+      console.log(chalk.blue('Scanning for Electron IPC channels...'));
+    } else {
+      console.log(chalk.blue('Scanning codebase...'));
+    }
 
     try {
       // Load or create config
@@ -44,13 +51,19 @@ export const scanCommand = new Command('scan')
 
       // Show results
       if (result.endpoints.length > 0) {
-        console.log(chalk.dim('\n📡 Endpoints discovered:\n'));
+        const isElectron = result.endpoints.some(e => e.path?.startsWith('ipc://'));
+        const label = isElectron ? 'IPC channels discovered' : 'Endpoints discovered';
+        console.log(chalk.dim(`\n📡 ${label}:\n`));
 
         for (const endpoint of result.endpoints.slice(0, 10)) {
           const methodColor = getMethodColor(endpoint.method);
-          console.log(`  ${methodColor(endpoint.method.padEnd(7))} ${chalk.cyan(endpoint.path)}`);
+          const displayPath = endpoint.path?.replace('ipc://', '') || endpoint.path || '';
+          console.log(`  ${methodColor(endpoint.method.padEnd(7))} ${chalk.cyan(displayPath)}`);
           if (endpoint.summary) {
             console.log(chalk.dim(`         ${endpoint.summary}`));
+          }
+          if (endpoint.metadata?.channel) {
+            console.log(chalk.dim(`         Channel: ${endpoint.metadata.channel}`));
           }
         }
 
@@ -119,6 +132,13 @@ async function getParser(framework: string) {
       case 'nest': {
         const { createNestParser } = await import('@docuflow/parser-nest');
         return createNestParser({
+          cwd: process.cwd(),
+          config: DEFAULT_PARSER_CONFIG,
+        });
+      }
+      case 'electron': {
+        const { createElectronParser } = await import('@docuflow/parser-electron');
+        return createElectronParser({
           cwd: process.cwd(),
           config: DEFAULT_PARSER_CONFIG,
         });
