@@ -14,7 +14,7 @@ export const scanCommand = new Command('scan')
   .option('-o, --output <path>', 'Output file for scan results (JSON)')
   .option('--include <patterns...>', 'Files to include')
   .option('--exclude <patterns...>', 'Files to exclude')
-  .option('-f, --framework <type>', 'Framework type (express, fastify, nest, electron)')
+  .option('-f, --framework <type>', 'Framework type (express, fastify, nest, electron, python, nextjs)')
   .action(async (options) => {
     const framework = options.framework || 'express';
     const isElectron = framework.toLowerCase() === 'electron';
@@ -139,6 +139,22 @@ async function getParser(framework: string) {
       case 'electron': {
         const { createElectronParser } = await import('@docuflow/parser-electron');
         return createElectronParser({
+          cwd: process.cwd(),
+          config: DEFAULT_PARSER_CONFIG,
+        });
+      }
+      case 'python':
+      case 'fastapi': {
+        const { createPythonParser } = await import('@docuflow/parser-python');
+        return createPythonParser({
+          cwd: process.cwd(),
+          config: DEFAULT_PARSER_CONFIG,
+        });
+      }
+      case 'nextjs':
+      case 'next': {
+        const { createNextJSParser } = await import('@docuflow/parser-nextjs');
+        return createNextJSParser({
           cwd: process.cwd(),
           config: DEFAULT_PARSER_CONFIG,
         });

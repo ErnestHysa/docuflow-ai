@@ -1,185 +1,196 @@
 import { NextResponse } from 'next/server';
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
 
 export async function GET() {
-  // In production, this would read from the actual scan results
-  // For now, return sample data
-  const data = {
-    version: {
-      version: '1.0.0',
-      timestamp: new Date().toISOString(),
-    },
-    endpoints: [
-      {
-        id: 'GET:/api/users',
-        method: 'GET',
-        path: '/api/users',
-        summary: 'List all users',
-        description: 'Returns a paginated list of users',
-        tags: ['Users'],
-        parameters: [
-          { name: 'page', type: 'number', location: 'query', required: false, description: 'Page number' },
-          { name: 'limit', type: 'number', location: 'query', required: false, description: 'Items per page' },
-        ],
-        requestBody: undefined,
-        responses: [
-          { statusCode: 200, description: 'Successful response' },
-          { statusCode: 401, description: 'Unauthorized' },
-        ],
-        authentication: { type: 'bearer', bearerFormat: 'JWT' },
-        deprecated: false,
-        sourceFile: 'src/routes/users.ts',
-        sourceLine: 10,
-        metadata: {},
-      },
-      {
-        id: 'POST:/api/users',
-        method: 'POST',
-        path: '/api/users',
-        summary: 'Create a new user',
-        description: 'Creates a new user account',
-        tags: ['Users'],
-        parameters: [],
-        requestBody: {
-          type: 'object',
-          properties: {
-            email: { type: 'string', description: 'User email' },
-            name: { type: 'string', description: 'User name' },
-            password: { type: 'string', description: 'User password' },
+  // Try to load scan results from .docuflow directory
+  const docuflowDir = join(process.cwd(), '.docuflow');
+  const scanResultsPath = join(docuflowDir, 'scan-results.json');
+
+  let data;
+
+  if (existsSync(scanResultsPath)) {
+    try {
+      const scanResults = JSON.parse(readFileSync(scanResultsPath, 'utf-8'));
+
+      // Check if this is an Electron IPC scan (paths start with ipc://)
+      const isElectronIPC = scanResults.endpoints.some((e: any) => e.path?.startsWith('ipc://'));
+
+      if (isElectronIPC) {
+        // Format for Electron IPC display
+        const groupedByType = scanResults.endpoints.reduce((acc: Record<string, any[]>, endpoint: any) => {
+          const type = endpoint.metadata?.ipcType || 'unknown';
+          if (!acc[type]) acc[type] = [];
+          acc[type].push(endpoint);
+          return acc;
+        }, {} as Record<string, any[]>);
+
+        const byType: Record<string, number> = {};
+        for (const [type, endpoints] of Object.entries(groupedByType)) {
+          byType[type] = (endpoints as any[]).length;
+        }
+
+        data = {
+          project: scanResults.projectPath?.split('/').pop() || 'Electron App',
+          type: 'electron',
+          framework: 'Electron IPC',
+          endpoints: scanResults.endpoints,
+          stats: {
+            total: scanResults.endpoints.length,
+            byType,
           },
-          required: ['email', 'name', 'password'],
-          example: { email: 'user@example.com', name: 'John Doe', password: 'secret123' },
+        };
+      } else {
+        // Regular HTTP API
+        data = {
+          version: { version: '1.0.0', timestamp: new Date().toISOString() },
+          type: 'http',
+          endpoints: scanResults.endpoints,
+        };
+      }
+    } catch (e) {
+      console.error('Failed to load scan results:', e);
+    }
+  }
+
+  // Fallback to demo data if no scan results
+  if (!data) {
+    data = {
+      project: 'Yggdrasil',
+      type: 'electron',
+      framework: 'Electron IPC',
+      endpoints: [
+        {
+          id: 'handle:pick-folder',
+          method: 'POST',
+          path: 'ipc://pick-folder',
+          summary: 'Open folder picker dialog',
+          description: 'Opens a native folder picker dialog and returns the selected path',
+          tags: ['Electron', 'IPC', 'Dialog', 'handle'],
+          parameters: [],
+          requestBody: { type: 'object', description: 'No parameters required' },
+          responses: [{ statusCode: 200, description: 'Selected folder path' }],
+          authentication: { type: 'none' },
+          deprecated: false,
+          sourceFile: 'src/main/main.ts',
+          sourceLine: 74,
+          metadata: { channel: 'pick-folder', ipcType: 'handle' },
         },
-        responses: [
-          { statusCode: 201, description: 'User created successfully' },
-          { statusCode: 400, description: 'Validation error' },
-        ],
-        authentication: { type: 'none' },
-        deprecated: false,
-        sourceFile: 'src/routes/users.ts',
-        sourceLine: 25,
-        metadata: {},
-      },
-      {
-        id: 'GET:/api/users/:id',
-        method: 'GET',
-        path: '/api/users/:id',
-        summary: 'Get user by ID',
-        description: 'Returns a single user by their ID',
-        tags: ['Users'],
-        parameters: [
-          { name: 'id', type: 'string', location: 'path', required: true, description: 'User ID' },
-        ],
-        requestBody: undefined,
-        responses: [
-          { statusCode: 200, description: 'User found' },
-          { statusCode: 404, description: 'User not found' },
-        ],
-        authentication: { type: 'bearer', bearerFormat: 'JWT' },
-        deprecated: false,
-        sourceFile: 'src/routes/users.ts',
-        sourceLine: 40,
-        metadata: {},
-      },
-      {
-        id: 'PUT:/api/users/:id',
-        method: 'PUT',
-        path: '/api/users/:id',
-        summary: 'Update user',
-        description: 'Updates an existing user',
-        tags: ['Users'],
-        parameters: [
-          { name: 'id', type: 'string', location: 'path', required: true, description: 'User ID' },
-        ],
-        requestBody: {
-          type: 'object',
-          properties: {
-            name: { type: 'string', description: 'User name' },
-            email: { type: 'string', description: 'User email' },
-          },
-          example: { name: 'Jane Doe', email: 'jane@example.com' },
+        {
+          id: 'handle:analyze-project',
+          method: 'POST',
+          path: 'ipc://analyze-project',
+          summary: 'Analyze a project',
+          description: 'Analyzes a project directory and builds an AST representation of all code files',
+          tags: ['Electron', 'IPC', 'Analysis', 'handle'],
+          parameters: [
+            { name: 'projectPath', type: 'string', description: 'Path to project directory' },
+          ],
+          requestBody: { type: 'object', description: 'Project path to analyze' },
+          responses: [{ statusCode: 200, description: 'Analysis complete with AST data' }],
+          authentication: { type: 'none' },
+          deprecated: false,
+          sourceFile: 'src/main/main.ts',
+          sourceLine: 111,
+          metadata: { channel: 'analyze-project', ipcType: 'handle' },
         },
-        responses: [
-          { statusCode: 200, description: 'User updated' },
-          { statusCode: 404, description: 'User not found' },
-        ],
-        authentication: { type: 'bearer', bearerFormat: 'JWT' },
-        deprecated: false,
-        sourceFile: 'src/routes/users.ts',
-        sourceLine: 55,
-        metadata: {},
-      },
-      {
-        id: 'DELETE:/api/users/:id',
-        method: 'DELETE',
-        path: '/api/users/:id',
-        summary: 'Delete user',
-        description: 'Deletes a user account',
-        tags: ['Users'],
-        parameters: [
-          { name: 'id', type: 'string', location: 'path', required: true, description: 'User ID' },
-        ],
-        requestBody: undefined,
-        responses: [
-          { statusCode: 204, description: 'User deleted' },
-          { statusCode: 404, description: 'User not found' },
-        ],
-        authentication: { type: 'bearer', bearerFormat: 'JWT' },
-        deprecated: false,
-        sourceFile: 'src/routes/users.ts',
-        sourceLine: 70,
-        metadata: {},
-      },
-      {
-        id: 'POST:/api/auth/login',
-        method: 'POST',
-        path: '/api/auth/login',
-        summary: 'User login',
-        description: 'Authenticates a user and returns a JWT token',
-        tags: ['Authentication'],
-        parameters: [],
-        requestBody: {
-          type: 'object',
-          properties: {
-            email: { type: 'string', description: 'User email' },
-            password: { type: 'string', description: 'User password' },
-          },
-          required: ['email', 'password'],
-          example: { email: 'user@example.com', password: 'secret123' },
+        {
+          id: 'handle:get-git-history',
+          method: 'POST',
+          path: 'ipc://get-git-history',
+          summary: 'Get Git history for a file',
+          description: 'Returns the commit history for a specific file in the project',
+          tags: ['Electron', 'IPC', 'Git', 'handle'],
+          parameters: [
+            { name: 'filePath', type: 'string', description: 'Path to file (relative to project root)' },
+          ],
+          requestBody: { type: 'object', description: 'File path' },
+          responses: [{ statusCode: 200, description: 'Array of commits' }],
+          authentication: { type: 'none' },
+          deprecated: false,
+          sourceFile: 'src/main/main.ts',
+          sourceLine: 139,
+          metadata: { channel: 'get-git-history', ipcType: 'handle' },
         },
-        responses: [
-          { statusCode: 200, description: 'Login successful', example: { token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' } },
-          { statusCode: 401, description: 'Invalid credentials' },
-        ],
-        authentication: { type: 'none' },
-        deprecated: false,
-        sourceFile: 'src/routes/auth.ts',
-        sourceLine: 15,
-        metadata: {},
+        {
+          id: 'handle:search-symbols',
+          method: 'POST',
+          path: 'ipc://search-symbols',
+          summary: 'Search for symbols',
+          description: 'Searches through all indexed symbols in the project',
+          tags: ['Electron', 'IPC', 'Search', 'handle'],
+          parameters: [
+            { name: 'query', type: 'string', description: 'Search query string' },
+            { name: 'options', type: 'object', description: 'Search options' },
+          ],
+          requestBody: { type: 'object', description: 'Search query and options' },
+          responses: [{ statusCode: 200, description: 'Matching symbols' }],
+          authentication: { type: 'none' },
+          deprecated: false,
+          sourceFile: 'src/main/main.ts',
+          sourceLine: 151,
+          metadata: { channel: 'search-symbols', ipcType: 'handle' },
+        },
+        {
+          id: 'handle:export-to-mermaid',
+          method: 'POST',
+          path: 'ipc://export-to-mermaid',
+          summary: 'Export to Mermaid diagram',
+          description: 'Exports the current project structure as a Mermaid diagram',
+          tags: ['Electron', 'IPC', 'Export', 'handle'],
+          parameters: [
+            { name: 'options', type: 'object', description: 'Export options' },
+          ],
+          requestBody: { type: 'object', description: 'Export options' },
+          responses: [{ statusCode: 200, description: 'Mermaid diagram string' }],
+          authentication: { type: 'none' },
+          deprecated: false,
+          sourceFile: 'src/main/main.ts',
+          sourceLine: 162,
+          metadata: { channel: 'export-to-mermaid', ipcType: 'handle' },
+        },
+        {
+          id: 'handle:git-get-branches',
+          method: 'POST',
+          path: 'ipc://git-get-branches',
+          summary: 'Get Git branches',
+          description: 'Returns all branches in the repository',
+          tags: ['Electron', 'IPC', 'Git', 'handle'],
+          parameters: [],
+          requestBody: { type: 'object', description: 'No parameters' },
+          responses: [{ statusCode: 200, description: 'Array of branch names' }],
+          authentication: { type: 'none' },
+          deprecated: false,
+          sourceFile: 'src/main/main.ts',
+          sourceLine: 239,
+          metadata: { channel: 'git-get-branches', ipcType: 'handle' },
+        },
+        {
+          id: 'handle:git-compare-branches',
+          method: 'POST',
+          path: 'ipc://git-compare-branches',
+          summary: 'Compare Git branches',
+          description: 'Compares two branches and shows differences',
+          tags: ['Electron', 'IPC', 'Git', 'handle'],
+          parameters: [
+            { name: 'branchA', type: 'string', description: 'First branch name' },
+            { name: 'branchB', type: 'string', description: 'Second branch name' },
+          ],
+          requestBody: { type: 'object', description: 'Branch names to compare' },
+          responses: [{ statusCode: 200, description: 'Comparison results' }],
+          authentication: { type: 'none' },
+          deprecated: false,
+          sourceFile: 'src/main/main.ts',
+          sourceLine: 290,
+          metadata: { channel: 'git-compare-branches', ipcType: 'handle' },
+        },
+      ],
+      stats: {
+        total: 23,
+        byType: { handle: 23 },
       },
-      {
-        id: 'GET:/api/posts',
-        method: 'GET',
-        path: '/api/posts',
-        summary: 'List posts',
-        description: 'Returns a list of posts',
-        tags: ['Posts'],
-        parameters: [
-          { name: 'page', type: 'number', location: 'query', required: false },
-          { name: 'limit', type: 'number', location: 'query', required: false },
-          { name: 'userId', type: 'string', location: 'query', required: false, description: 'Filter by user' },
-        ],
-        requestBody: undefined,
-        responses: [
-          { statusCode: 200, description: 'Successful response' },
-        ],
-        authentication: { type: 'none' },
-        deprecated: false,
-        sourceFile: 'src/routes/posts.ts',
-        sourceLine: 8,
-        metadata: {},
-      },
-    ],
-  };
+    };
+  }
 
   return NextResponse.json(data);
 }
