@@ -1,0 +1,38 @@
+{
+  "name": "@docuflow/core",
+  "version": "0.1.0",
+  "description": "Core API documentation parsing and generation engine",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/types/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "tinyglobby": "^0.2.6",
+    "minimatch": "^9.0.3"
+  },
+  "devDependencies": {
+    "@types/minimatch": "^5.1.0",
+    "vitest": "^1.2.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

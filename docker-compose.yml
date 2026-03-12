@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  docuflow:
+    build:
+      context: .
+      target: full-production
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./docs:/app/docs
+      - ./.docuflow:/app/.docuflow
+    environment:
+      - NODE_ENV=production
+      - DOCUFLOW_DATA_DIR=/app/.docuflow
+    restart: unless-stopped
+
+  # Standalone CLI service
+  docuflow-cli:
+    build:
+      context: .
+      target: cli-production
+    volumes:
+      - ./:/workspace
+      - /workspace/node_modules
+    working_dir: /workspace
+    environment:
+      - DOCUFLOW_CONFIG=/workspace/docuflow.config.json
+    # Override with: docker-compose run docuflow-cli scan

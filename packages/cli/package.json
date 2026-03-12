@@ -1,0 +1,37 @@
+{
+  "name": "@docuflow/cli",
+  "version": "0.1.0",
+  "description": "CLI tool for DocuFlow AI - API Documentation Generator",
+  "type": "module",
+  "bin": {
+    "docuflow": "./dist/index.js",
+    "df": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@docuflow/core": "workspace:*",
+    "@docuflow/parser-express": "workspace:*",
+    "@docuflow/parser-fastify": "workspace:*",
+    "@docuflow/parser-nest": "workspace:*",
+    "commander": "^12.0.0",
+    "chalk": "^5.3.0",
+    "chokidar": "^3.6.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

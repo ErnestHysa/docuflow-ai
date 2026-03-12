@@ -1,0 +1,13 @@
+{
+  "name": "sample-express-app",
+  "version": "1.0.0",
+  "description": "Sample Express.js app for testing DocuFlow AI",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

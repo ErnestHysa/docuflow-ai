@@ -1,0 +1,36 @@
+{
+  "name": "docuflow-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-Powered API Documentation Generator with Live Change Detection",
+  "author": "DocuFlow AI",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "pnpm --filter \"./packages/**\" dev",
+    "build": "pnpm --filter \"./packages/**\" build",
+    "test": "pnpm --filter \"./packages/**\" test",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "clean": "pnpm --filter \"./packages/**\" clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.2.0",
+    "tailwindcss-animate": "^1.0.7",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0"
+}
